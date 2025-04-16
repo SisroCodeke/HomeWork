@@ -299,8 +299,8 @@ class LUT:
 
 # Example usage:
 if __name__ == "__main__":
-    # Initialize with image path
-    lut = LUT("CV/samplec.jpg")
-    
+    # ----------------------------------- PUT THE IMAGE PATH HERE -------------------------------------------
+    lut = LUT("samplec.jpg")
+    # ----------------------------------- PUT THE IMAGE PATH HERE -------------------------------------------
     # Display all results in a single figure
     lut.show_all_results(brightness_value=50)
