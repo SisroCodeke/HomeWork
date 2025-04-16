@@ -42,6 +42,32 @@ class LUT:
             print(f"Error loading image: {e}")
             return None
     
+    def _custom_zeros_like(self, arr):
+        """Custom implementation of np.zeros_like"""
+        if len(arr.shape) == 3:
+            return np.array([[[0 for _ in range(arr.shape[2])] 
+                            for _ in range(arr.shape[1])] 
+                            for _ in range(arr.shape[0])], dtype=arr.dtype)
+        else:
+            return np.array([[0 for _ in range(arr.shape[1])] 
+                            for _ in range(arr.shape[0])], dtype=arr.dtype)
+    
+    def _custom_clip(self, value, min_val, max_val):
+        """Custom implementation of np.clip for single values"""
+        return min(max(value, min_val), max_val)
+    
+    def _custom_zeros(self, shape, dtype=np.uint8):
+        """Custom implementation of np.zeros"""
+        if len(shape) == 2:
+            return np.array([[0 for _ in range(shape[1])] 
+                           for _ in range(shape[0])], dtype=dtype)
+        elif len(shape) == 3:
+            return np.array([[[0 for _ in range(shape[2])] 
+                            for _ in range(shape[1])] 
+                            for _ in range(shape[0])], dtype=dtype)
+        else:
+            raise ValueError("Unsupported shape dimensions")
+    
     def negative_image(self):
         """
         Create negative of the image by inverting pixel values.
@@ -56,7 +82,7 @@ class LUT:
         if self.image is None:
             return None
             
-        negative = np.zeros_like(self.image)
+        negative = self._custom_zeros_like(self.image)
         for i in range(self.height):
             for j in range(self.width):
                 for k in range(3 if len(self.image.shape) == 3 else 1):
@@ -84,7 +110,7 @@ class LUT:
         else:
             gray = self.image.copy()
             
-        thresholded = np.zeros_like(gray)
+        thresholded = self._custom_zeros_like(gray)
         for i in range(self.height):
             for j in range(self.width):
                 thresholded[i, j] = 255 if gray[i, j] > threshold else 0
@@ -107,13 +133,13 @@ class LUT:
         if self.image is None:
             return None
             
-        corrected = np.zeros_like(self.image)
+        corrected = self._custom_zeros_like(self.image)
         for i in range(self.height):
             for j in range(self.width):
                 for k in range(3 if len(self.image.shape) == 3 else 1):
                     normalized = self.image[i, j, k] / 255.0
                     corrected_value = c * pow(normalized, gamma)
-                    corrected[i, j, k] = np.clip(int(corrected_value * 255), 0, 255)
+                    corrected[i, j, k] = int(self._custom_clip(corrected_value * 255, 0, 255))
         return corrected
     
     def contrast_stretching(self, r1=0, r2=255, s1=0, s2=255):
@@ -132,7 +158,7 @@ class LUT:
         if self.image is None:
             return None
             
-        stretched = np.zeros_like(self.image)
+        stretched = self._custom_zeros_like(self.image)
         for i in range(self.height):
             for j in range(self.width):
                 for k in range(3 if len(self.image.shape) == 3 else 1):
@@ -159,11 +185,11 @@ class LUT:
         if self.image is None:
             return None
             
-        brightened = np.zeros_like(self.image)
+        brightened = self._custom_zeros_like(self.image)
         for i in range(self.height):
             for j in range(self.width):
                 for k in range(3 if len(self.image.shape) == 3 else 1):
-                    brightened[i, j, k] = np.clip(self.image[i, j, k] + value, 0, 255)
+                    brightened[i, j, k] = self._custom_clip(self.image[i, j, k] + value, 0, 255)
         return brightened
     
     def histogram(self, image=None):
@@ -187,7 +213,7 @@ class LUT:
         else:
             gray = image.copy()
             
-        hist = np.zeros(256)
+        hist = np.array([0] * 256)  # Using np.array for the histogram output
         for i in range(gray.shape[0]):
             for j in range(gray.shape[1]):
                 intensity = gray[i, j]
@@ -222,7 +248,7 @@ class LUT:
         cdf_normalized = (cdf - cdf.min()) * 255 / (cdf.max() - cdf.min())
         
         # Create equalized image
-        equalized = np.zeros_like(gray)
+        equalized = self._custom_zeros_like(gray)
         for i in range(self.height):
             for j in range(self.width):
                 equalized[i, j] = cdf_normalized[gray[i, j]]
@@ -243,7 +269,7 @@ class LUT:
         if len(image.shape) == 2:  # Already grayscale
             return image.copy()
             
-        gray = np.zeros((image.shape[0], image.shape[1]), dtype=np.uint8)
+        gray = self._custom_zeros((image.shape[0], image.shape[1]))
         for i in range(image.shape[0]):
             for j in range(image.shape[1]):
                 b, g, r = image[i, j]
@@ -299,8 +325,8 @@ class LUT:
 
 # Example usage:
 if __name__ == "__main__":
-    # ----------------------------------- PUT THE IMAGE PATH HERE -------------------------------------------
-    lut = LUT("samplec.jpg")
-    # ----------------------------------- PUT THE IMAGE PATH HERE -------------------------------------------
+    # Initialize with image path
+    lut = LUT("CV/samplec.jpg")
+    
     # Display all results in a single figure
     lut.show_all_results(brightness_value=50)
