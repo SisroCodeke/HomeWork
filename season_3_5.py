@@ -1,332 +1,352 @@
+# Import OpenCV library for image processing
 import cv2
+# Import NumPy for numerical operations
 import numpy as np
+# Import matplotlib for displaying images and histograms
 import matplotlib.pyplot as plt
-from math import pow
 
+# Define a class for Look-Up Table (LUT) based image processing
 class LUT:
+    # Initialize the class with an image path
     def __init__(self, image_path):
-        """
-        Initialize the LUT class with an image path.
-        
-        Parameters:
-        - image_path: Path to the input image file
-        
-        Attributes:
-        - image_path: Stores the path of the image
-        - image: Stores the loaded image as numpy array
-        - height: Height of the image in pixels
-        - width: Width of the image in pixels
-        """
+        # Store the image path
         self.image_path = image_path
+        # Load the image using the get_image method
         self.image = self.get_image()
-        if self.image is not None:
-            self.height, self.width = self.image.shape[:2]
     
+    # Method to load an image from the specified path
     def get_image(self):
-        """
-        Load image from the specified path and return as numpy array.
-        
-        Process:
-        1. Uses OpenCV's imread to load the image
-        2. Checks if image was loaded successfully
-        3. Returns the image array or None if loading failed
-        
-        Note: OpenCV loads images in BGR format by default
-        """
-        try:
-            image = cv2.imread(self.image_path)
-            if image is None:
-                raise FileNotFoundError(f"Image not found at {self.image_path}")
-            return image
-        except Exception as e:
-            print(f"Error loading image: {e}")
-            return None
+        """Get image based on hard path and return as numpy array"""
+        # Read the image using OpenCV
+        image = cv2.imread(self.image_path)
+        # Check if image was loaded successfully
+        if image is None:
+            raise ValueError("Image not found at the specified path")
+        return image
     
-    def _custom_zeros_like(self, arr):
-        """Custom implementation of np.zeros_like"""
-        if len(arr.shape) == 3:
-            return np.array([[[0 for _ in range(arr.shape[2])] 
-                            for _ in range(arr.shape[1])] 
-                            for _ in range(arr.shape[0])], dtype=arr.dtype)
-        else:
-            return np.array([[0 for _ in range(arr.shape[1])] 
-                            for _ in range(arr.shape[0])], dtype=arr.dtype)
-    
-    def _custom_clip(self, value, min_val, max_val):
-        """Custom implementation of np.clip for single values"""
-        return min(max(value, min_val), max_val)
-    
-    def _custom_zeros(self, shape, dtype=np.uint8):
-        """Custom implementation of np.zeros"""
-        if len(shape) == 2:
-            return np.array([[0 for _ in range(shape[1])] 
-                           for _ in range(shape[0])], dtype=dtype)
-        elif len(shape) == 3:
-            return np.array([[[0 for _ in range(shape[2])] 
-                            for _ in range(shape[1])] 
-                            for _ in range(shape[0])], dtype=dtype)
-        else:
-            raise ValueError("Unsupported shape dimensions")
-    
+    # Method to create a negative of the image
     def negative_image(self):
-        """
-        Create negative of the image by inverting pixel values.
-        
-        Process:
-        1. Creates a blank image with same dimensions
-        2. For each pixel in each channel, subtracts from 255
-        3. Returns the negative image
-        
-        Formula: negative_pixel = 255 - original_pixel
-        """
-        if self.image is None:
-            return None
-            
-        negative = self._custom_zeros_like(self.image)
-        for i in range(self.height):
-            for j in range(self.width):
-                for k in range(3 if len(self.image.shape) == 3 else 1):
-                    negative[i, j, k] = 255 - self.image[i, j, k]
+        """Create negative of the image"""
+        # Create a copy of the original image
+        negative = self.image.copy()
+        # Get image dimensions (rows, columns, channels)
+        rows, cols, channels = negative.shape
+        # Loop through each pixel and channel
+        for i in range(rows):
+            for j in range(cols):
+                for k in range(channels):
+                    # Subtract each pixel value from 255 to get negative
+                    negative[i, j, k] = 255 - negative[i, j, k]
         return negative
     
+    # Method to apply thresholding to the image
+    # def thresholding(self, threshold=127):
+    #     """Apply thresholding to the image"""
+    #     # Convert to grayscale if image is color
+    #     if len(self.image.shape) == 3:
+    #         gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+    #     else:
+    #         gray = self.image.copy()
+        
+    #     # Create a copy of the grayscale image
+    #     thresh = gray.copy()
+    #     # Get image dimensions (rows, columns)
+    #     rows, cols = thresh.shape
+    #     # Loop through each pixel
+    #     for i in range(rows):
+    #         for j in range(cols):
+    #             # Apply threshold - set to 255 if above threshold, else 0
+    #             thresh[i, j] = 255 if thresh[i, j] > threshold else 0
+    #     return thresh
+    
+    
     def thresholding(self, threshold=127):
-        """
-        Apply binary thresholding to the image.
-        
-        Parameters:
-        - threshold: Pixel value threshold (default 127)
-        
-        Process:
-        1. Converts image to grayscale if it's color
-        2. For each pixel, sets to 255 if above threshold, else 0
-        3. Returns the thresholded image
-        """
-        if self.image is None:
-            return None
-            
-        # Convert to grayscale if needed
+        """Apply thresholding to the image"""
+        # Convert to grayscale manually if image is color
         if len(self.image.shape) == 3:
-            gray = self._convert_to_grayscale()
+            # Initialize empty list for grayscale image
+            gray = []
+            rows, cols, _ = self.image.shape
+            # Loop through each row
+            for i in range(rows):
+                row = []
+                # Loop through each column
+                for j in range(cols):
+                    # Get BGR values (OpenCV uses BGR order)
+                    b, g, r = self.image[i, j]
+                    # Calculate grayscale value using luminosity method
+                    gray_value = 0.299 * r + 0.587 * g + 0.114 * b
+                    row.append(int(gray_value))
+                gray.append(row)
+            # Convert list to a more array-like structure
+            gray = [[pixel for pixel in row] for row in gray]
         else:
-            gray = self.image.copy()
-            
-        thresholded = self._custom_zeros_like(gray)
-        for i in range(self.height):
-            for j in range(self.width):
-                thresholded[i, j] = 255 if gray[i, j] > threshold else 0
-        return thresholded
-    
-    def gamma_correction(self, gamma=1.0, c=1.0):
-        """
-        Apply gamma correction to the image.
+            # For grayscale images, create a deep copy manually
+            gray = [[pixel for pixel in row] for row in self.image]
         
-        Parameters:
-        - gamma: Gamma value (default 1.0)
-        - c: Constant multiplier (default 1.0)
+        # Apply thresholding
+        thresh = []
+        rows = len(gray)
+        cols = len(gray[0]) if rows > 0 else 0
+        for i in range(rows):
+            row = []
+            for j in range(cols):
+                # Apply threshold - set to 255 if above threshold, else 0
+                pixel = 255 if gray[i][j] > threshold else 0
+                row.append(pixel)
+            thresh.append(row)
         
-        Formula: s = c * r^gamma
-        Process:
-        1. Normalizes pixel values to [0,1]
-        2. Applies gamma correction formula
-        3. Scales back to [0,255] range
-        """
-        if self.image is None:
-            return None
-            
-        corrected = self._custom_zeros_like(self.image)
-        for i in range(self.height):
-            for j in range(self.width):
-                for k in range(3 if len(self.image.shape) == 3 else 1):
-                    normalized = self.image[i, j, k] / 255.0
-                    corrected_value = c * pow(normalized, gamma)
-                    corrected[i, j, k] = int(self._custom_clip(corrected_value * 255, 0, 255))
-        return corrected
+        return thresh
     
+    # Method to apply gamma correction
+    def gamma_correction(self, gamma=1.0, c=1):
+        """Apply gamma correction: s = c * r^gamma"""
+        # Create a copy of the image with float32 type for calculations
+        corrected = self.image.copy().astype(np.float32)
+        # Get image dimensions
+        rows, cols, channels = corrected.shape
+        # Loop through each pixel and channel
+        for i in range(rows):
+            for j in range(cols):
+                for k in range(channels):
+                    # Apply gamma correction formula
+                    corrected[i, j, k] = c * (corrected[i, j, k] / 255.0) ** gamma
+        # Scale back to 0-255 range and convert to uint8
+        return (corrected * 255).astype(np.uint8)
+    
+    # Method to apply contrast stretching
     def contrast_stretching(self, r1=0, r2=255, s1=0, s2=255):
-        """
-        Apply contrast stretching to enhance image contrast.
-        
-        Parameters:
-        - r1, r2: Input range to be stretched
-        - s1, s2: Output range for stretching
-        
-        Process:
-        1. Pixels <= r1 are mapped to s1
-        2. Pixels >= r2 are mapped to s2
-        3. Others are linearly interpolated between s1 and s2
-        """
-        if self.image is None:
-            return None
-            
-        stretched = self._custom_zeros_like(self.image)
-        for i in range(self.height):
-            for j in range(self.width):
-                for k in range(3 if len(self.image.shape) == 3 else 1):
-                    pixel = self.image[i, j, k]
+        """Apply contrast stretching"""
+        # Create a copy of the image
+        stretched = self.image.copy()
+        # Get image dimensions
+        rows, cols, channels = stretched.shape
+        # Loop through each pixel and channel
+        for i in range(rows):
+            for j in range(cols):
+                for k in range(channels):
+                    # Get current pixel value
+                    pixel = stretched[i, j, k]
+                    # Apply contrast stretching formula
                     if pixel <= r1:
                         stretched[i, j, k] = s1
                     elif pixel >= r2:
                         stretched[i, j, k] = s2
                     else:
-                        stretched[i, j, k] = s1 + ((pixel - r1) * (s2 - s1) / (r2 - r1))
+                        stretched[i, j, k] = s1 + ((pixel - r1) / (r2 - r1)) * (s2 - s1)
         return stretched
     
+    # Method to adjust brightness
     def adjust_brightness(self, value=0):
-        """
-        Adjust image brightness by adding/subtracting a constant value.
-        
-        Parameters:
-        - value: Brightness adjustment value (can be positive or negative)
-        
-        Process:
-        1. Adds the value to each pixel component
-        2. Clips values to stay within [0,255] range
-        """
-        if self.image is None:
-            return None
-            
-        brightened = self._custom_zeros_like(self.image)
-        for i in range(self.height):
-            for j in range(self.width):
-                for k in range(3 if len(self.image.shape) == 3 else 1):
-                    brightened[i, j, k] = self._custom_clip(self.image[i, j, k] + value, 0, 255)
-        return brightened
+        """Adjust brightness by adding/subtracting value from all pixels"""
+        # Create a copy of the image with int16 type to handle negative values
+        bright = self.image.copy().astype(np.int16)
+        # Get image dimensions
+        rows, cols, channels = bright.shape
+        # Loop through each pixel and channel
+        for i in range(rows):
+            for j in range(cols):
+                for k in range(channels):
+                    # Add brightness value and clip to 0-255 range
+                    bright[i, j, k] = np.clip(bright[i, j, k] + value, 0, 255)
+        # Convert back to uint8 after clipping
+        return bright.astype(np.uint8)
     
-    def histogram(self, image=None):
-        """
-        Calculate and return histogram of the image.
-        
-        Parameters:
-        - image: Optional input image (uses class image if None)
-        
-        Returns:
-        - hist: 256-bin histogram array
-        """
-        if image is None:
-            image = self.image
-            if image is None:
-                return None
-        
-        # Convert to grayscale if needed
+    # Helper method to display histograms
+    def show_histogram(self, image, title, pos, color='gray'):
+        """Helper function to show histogram for a single image"""
+        # Create a subplot at the specified position
+        plt.subplot(4, 4, pos)
+        # For color images
         if len(image.shape) == 3:
-            gray = self._convert_to_grayscale(image)
+            # Define colors for each channel (BGR)
+            colors = ('b', 'g', 'r')
+            # Calculate and plot histogram for each channel
+            for i, col in enumerate(colors):
+                hist = cv2.calcHist([image], [i], None, [256], [0, 256])
+                plt.plot(hist, color=col)
         else:
-            gray = image.copy()
-            
-        hist = np.array([0] * 256)  # Using np.array for the histogram output
-        for i in range(gray.shape[0]):
-            for j in range(gray.shape[1]):
-                intensity = gray[i, j]
-                hist[intensity] += 1
-        
-        return hist
+            # For grayscale images, calculate and plot single histogram
+            hist = cv2.calcHist([image], [0], None, [256], [0, 256])
+            plt.plot(hist, color=color)
+        # Set plot title and labels
+        plt.title(title)
+        plt.xlabel('Pixel Value')
+        plt.ylabel('Frequency')
     
-    def histogram_equalization(self):
-        """
-        Perform histogram equalization to improve image contrast.
+    # Method to display all processed images and their histograms
+    def display_all(self):
+        """Display all processed images and their histograms in one figure"""
+        # Process all images using the various methods
+        negative = self.negative_image()
+        threshold = self.thresholding(127)
+        gamma_corrected = self.gamma_correction(gamma=0.5)
+        contrast_stretched = self.contrast_stretching(r1=50, r2=200, s1=30, s2=220)
+        equalized = self.histogram_equalization()
+        brighter = self.adjust_brightness(50)
+        darker = self.adjust_brightness(-50)
         
-        Process:
-        1. Calculates image histogram
-        2. Computes cumulative distribution function (CDF)
-        3. Normalizes CDF to [0,255] range
-        4. Maps pixel values using normalized CDF
-        """
-        if self.image is None:
-            return None
-            
-        # Convert to grayscale if needed
-        if len(self.image.shape) == 3:
-            gray = self._convert_to_grayscale()
-        else:
-            gray = self.image.copy()
-            
-        # Calculate histogram
-        hist = self.histogram(gray)
+        # Convert BGR images to RGB for matplotlib display
+        original_rgb = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
+        negative_rgb = cv2.cvtColor(negative, cv2.COLOR_BGR2RGB)
+        gamma_rgb = cv2.cvtColor(gamma_corrected, cv2.COLOR_BGR2RGB)
+        contrast_rgb = cv2.cvtColor(contrast_stretched, cv2.COLOR_BGR2RGB)
+        equalized_rgb = cv2.cvtColor(equalized, cv2.COLOR_BGR2RGB)
+        brighter_rgb = cv2.cvtColor(brighter, cv2.COLOR_BGR2RGB)
+        darker_rgb = cv2.cvtColor(darker, cv2.COLOR_BGR2RGB)
         
-        # Calculate cumulative distribution function (CDF)
-        cdf = hist.cumsum()
-        cdf_normalized = (cdf - cdf.min()) * 255 / (cdf.max() - cdf.min())
-        
-        # Create equalized image
-        equalized = self._custom_zeros_like(gray)
-        for i in range(self.height):
-            for j in range(self.width):
-                equalized[i, j] = cdf_normalized[gray[i, j]]
-        
-        return equalized
-    
-    def _convert_to_grayscale(self, image=None):
-        """
-        Convert color image to grayscale using luminance formula.
-        
-        Formula: gray = 0.299*R + 0.587*G + 0.114*B
-        """
-        if image is None:
-            image = self.image
-            if image is None:
-                return None
-        
-        if len(image.shape) == 2:  # Already grayscale
-            return image.copy()
-            
-        gray = self._custom_zeros((image.shape[0], image.shape[1]))
-        for i in range(image.shape[0]):
-            for j in range(image.shape[1]):
-                b, g, r = image[i, j]
-                gray[i, j] = int(0.299 * r + 0.587 * g + 0.114 * b)
-        return gray
-    
-    def show_all_results(self, brightness_value=50):
-        """
-        Display all processed images and their histograms in a single figure.
-        
-        Parameters:
-        - brightness_value: Value for brightness adjustment
-        """
-        if self.image is None:
-            print("No image loaded!")
-            return
-        
-        # Process images using all functions
-        processed_images = {
-            "Original": self.image,
-            "Negative": self.negative_image(),
-            "Thresholded": self.thresholding(128),
-            "Gamma Corrected": self.gamma_correction(gamma=0.5),
-            "Contrast Stretched": self.contrast_stretching(50, 200, 0, 255),
-            "Brightness Adjusted": self.adjust_brightness(brightness_value),
-            "Histogram Equalized": self.histogram_equalization()
-        }
-        
-        # Create figure with subplots
+        # Create a large figure for all subplots
         plt.figure(figsize=(20, 20))
         
-        # Display images and their histograms
-        for idx, (title, image) in enumerate(processed_images.items(), 1):
-            # Show image
-            plt.subplot(4, 4, idx*2-1)
-            if len(image.shape) == 2:
-                plt.imshow(image, cmap='gray')
-            else:
-                plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-            plt.title(title)
-            plt.axis('off')
-            
-            # Show histogram
-            plt.subplot(4, 4, idx*2)
-            hist = self.histogram(image)
-            plt.bar(range(256), hist, color='gray')
-            plt.title(f"{title} Histogram")
-            plt.xlim([0, 255])
+        # Original image subplot
+        plt.subplot(4, 4, 1)
+        plt.imshow(original_rgb)
+        plt.title('Original Image')
+        plt.axis('off')
         
+        # Original histogram
+        self.show_histogram(self.image, 'Original Histogram', 2)
+        
+        # Negative image subplot
+        plt.subplot(4, 4, 3)
+        plt.imshow(negative_rgb)
+        plt.title('Negative Image')
+        plt.axis('off')
+        
+        # Negative histogram
+        self.show_histogram(negative, 'Negative Histogram', 4)
+        
+        # Threshold image subplot
+        plt.subplot(4, 4, 5)
+        plt.imshow(threshold, cmap='gray')
+        plt.title('Threshold Image')
+        plt.axis('off')
+        
+        # Threshold histogram
+        self.show_histogram(threshold, 'Threshold Histogram', 6)
+        
+        # Gamma corrected image subplot
+        plt.subplot(4, 4, 7)
+        plt.imshow(gamma_rgb)
+        plt.title('Gamma Corrected (γ=0.5)')
+        plt.axis('off')
+        
+        # Gamma histogram
+        self.show_histogram(gamma_corrected, 'Gamma Histogram', 8)
+        
+        # Contrast stretched image subplot
+        plt.subplot(4, 4, 9)
+        plt.imshow(contrast_rgb)
+        plt.title('Contrast Stretched')
+        plt.axis('off')
+        
+        # Contrast histogram
+        self.show_histogram(contrast_stretched, 'Contrast Histogram', 10)
+        
+        # Histogram equalized image subplot
+        plt.subplot(4, 4, 11)
+        plt.imshow(equalized_rgb)
+        plt.title('Histogram Equalized')
+        plt.axis('off')
+        
+        # Equalized histogram
+        self.show_histogram(equalized, 'Equalized Histogram', 12)
+        
+        # Brighter image subplot
+        plt.subplot(4, 4, 13)
+        plt.imshow(brighter_rgb)
+        plt.title('Brighter (+50)')
+        plt.axis('off')
+        
+        # Brighter histogram
+        self.show_histogram(brighter, 'Brighter Histogram', 14)
+        
+        # Darker image subplot
+        plt.subplot(4, 4, 15)
+        plt.imshow(darker_rgb)
+        plt.title('Darker (-50)')
+        plt.axis('off')
+        
+        # Darker histogram
+        self.show_histogram(darker, 'Darker Histogram', 16)
+        
+        # Adjust layout to prevent overlap
         plt.tight_layout()
+        # Display the figure
         plt.show()
-
-
-# Example usage:
-if __name__ == "__main__":
-    # Initialize with image path
-    lut = LUT("CV/samplec.jpg")
     
-    # Display all results in a single figure
-    lut.show_all_results(brightness_value=50)
+    # Method to perform histogram equalization
+    def histogram_equalization(self):
+        """Apply histogram equalization"""
+        # For color images
+        if len(self.image.shape) == 3:
+            # Convert to YCrCb color space (Y is luminance channel)
+            ycrcb = cv2.cvtColor(self.image, cv2.COLOR_BGR2YCrCb)
+            # Extract the Y channel
+            y = ycrcb[:, :, 0]
+            
+            # Calculate histogram for Y channel
+            hist = [0] * 256
+            rows, cols = y.shape
+            for i in range(rows):
+                for j in range(cols):
+                    hist[y[i, j]] += 1
+            
+            # Calculate cumulative distribution function (CDF)
+            cdf = [0] * 256
+            cdf[0] = hist[0]
+            for i in range(1, 256):
+                cdf[i] = cdf[i-1] + hist[i]
+            
+            # Normalize CDF
+            cdf_min = min(cdf)
+            total_pixels = rows * cols
+            for i in range(256):
+                cdf[i] = round((cdf[i] - cdf_min) / (total_pixels - cdf_min) * 255)
+            
+            # Apply equalization to Y channel
+            equalized = y.copy()
+            for i in range(rows):
+                for j in range(cols):
+                    equalized[i, j] = cdf[y[i, j]]
+            
+            # Replace Y channel with equalized values and convert back to BGR
+            ycrcb[:, :, 0] = equalized
+            return cv2.cvtColor(ycrcb, cv2.COLOR_YCrCb2BGR)
+        else:
+            # For grayscale images
+            # Calculate histogram
+            hist = [0] * 256
+            rows, cols = self.image.shape
+            for i in range(rows):
+                for j in range(cols):
+                    hist[self.image[i, j]] += 1
+            
+            # Calculate CDF
+            cdf = [0] * 256
+            cdf[0] = hist[0]
+            for i in range(1, 256):
+                cdf[i] = cdf[i-1] + hist[i]
+            
+            # Normalize CDF
+            cdf_min = min(cdf)
+            total_pixels = rows * cols
+            for i in range(256):
+                cdf[i] = round((cdf[i] - cdf_min) / (total_pixels - cdf_min) * 255)
+            
+            # Apply equalization
+            equalized = self.image.copy()
+            for i in range(rows):
+                for j in range(cols):
+                    equalized[i, j] = cdf[self.image[i, j]]
+            
+            return equalized
+
+
+# Example usage
+if __name__ == "__main__":
+    # Create LUT instance with image path
+    lut = LUT("/home/panzer/Desktop/DESK/CV/samplec.jpg")
+    
+    # Display all processed images and histograms in one figure
+    lut.display_all()
