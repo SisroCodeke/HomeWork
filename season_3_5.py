@@ -40,62 +40,23 @@ class LUT:
         return negative
     
     # Method to apply thresholding to the image
-    # def thresholding(self, threshold=127):
-    #     """Apply thresholding to the image"""
-    #     # Convert to grayscale if image is color
-    #     if len(self.image.shape) == 3:
-    #         gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
-    #     else:
-    #         gray = self.image.copy()
-        
-    #     # Create a copy of the grayscale image
-    #     thresh = gray.copy()
-    #     # Get image dimensions (rows, columns)
-    #     rows, cols = thresh.shape
-    #     # Loop through each pixel
-    #     for i in range(rows):
-    #         for j in range(cols):
-    #             # Apply threshold - set to 255 if above threshold, else 0
-    #             thresh[i, j] = 255 if thresh[i, j] > threshold else 0
-    #     return thresh
-    
-    
     def thresholding(self, threshold=127):
         """Apply thresholding to the image"""
-        # Convert to grayscale manually if image is color
+        # Convert to grayscale if image is color
         if len(self.image.shape) == 3:
-            # Initialize empty list for grayscale image
-            gray = []
-            rows, cols, _ = self.image.shape
-            # Loop through each row
-            for i in range(rows):
-                row = []
-                # Loop through each column
-                for j in range(cols):
-                    # Get BGR values (OpenCV uses BGR order)
-                    b, g, r = self.image[i, j]
-                    # Calculate grayscale value using luminosity method
-                    gray_value = 0.299 * r + 0.587 * g + 0.114 * b
-                    row.append(int(gray_value))
-                gray.append(row)
-            # Convert list to a more array-like structure
-            gray = [[pixel for pixel in row] for row in gray]
+            gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
         else:
-            # For grayscale images, create a deep copy manually
-            gray = [[pixel for pixel in row] for row in self.image]
+            gray = self.image.copy()
         
-        # Apply thresholding
-        thresh = []
-        rows = len(gray)
-        cols = len(gray[0]) if rows > 0 else 0
+        # Create a copy of the grayscale image
+        thresh = gray.copy()
+        # Get image dimensions (rows, columns)
+        rows, cols = thresh.shape
+        # Loop through each pixel
         for i in range(rows):
-            row = []
             for j in range(cols):
                 # Apply threshold - set to 255 if above threshold, else 0
-                pixel = 255 if gray[i][j] > threshold else 0
-                row.append(pixel)
-            thresh.append(row)
-        
+                thresh[i, j] = 255 if thresh[i, j] > threshold else 0
         return thresh
     
     # Method to apply gamma correction
