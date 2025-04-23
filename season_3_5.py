@@ -24,71 +24,110 @@ class LUT:
             raise ValueError("Image not found at the specified path")
         return image
     
+    # Method to convert BGR to RGB manually
+    def bgr_to_rgb(self, image):
+        """Convert BGR image to RGB using loops"""
+        rgb = image.copy()
+        rows, cols, channels = rgb.shape
+        for i in range(rows):
+            for j in range(cols):
+                # Swap B and R channels
+                rgb[i, j, 0], rgb[i, j, 2] = rgb[i, j, 2], rgb[i, j, 0]
+        return rgb
+    
+    # Method to convert BGR to grayscale manually
+    def bgr_to_gray(self, image):
+        """Convert BGR image to grayscale using loops"""
+        gray = np.zeros((image.shape[0], image.shape[1]), dtype=np.uint8)
+        rows, cols = gray.shape
+        for i in range(rows):
+            for j in range(cols):
+                # Weighted average for grayscale conversion
+                gray[i, j] = 0.114 * image[i, j, 0] + 0.587 * image[i, j, 1] + 0.299 * image[i, j, 2]
+        return gray
+    
+    # Method to convert BGR to YCrCb manually
+    def bgr_to_ycrcb(self, image):
+        """Convert BGR image to YCrCb using loops"""
+        ycrcb = np.zeros_like(image, dtype=np.float32)
+        rows, cols, channels = ycrcb.shape
+        for i in range(rows):
+            for j in range(cols):
+                b, g, r = image[i, j]
+                # Y component
+                ycrcb[i, j, 0] = 0.299 * r + 0.587 * g + 0.114 * b
+                # Cr component
+                ycrcb[i, j, 1] = (r - ycrcb[i, j, 0]) * 0.713 + 128
+                # Cb component
+                ycrcb[i, j, 2] = (b - ycrcb[i, j, 0]) * 0.564 + 128
+        return ycrcb.astype(np.uint8)
+    
+    # Method to convert YCrCb to BGR manually
+    def ycrcb_to_bgr(self, image):
+        """Convert YCrCb image to BGR using loops"""
+        bgr = np.zeros_like(image, dtype=np.float32)
+        rows, cols, channels = bgr.shape
+        for i in range(rows):
+            for j in range(cols):
+                y, cr, cb = image[i, j]
+                # R component
+                r = y + 1.403 * (cr - 128)
+                # G component
+                g = y - 0.714 * (cr - 128) - 0.344 * (cb - 128)
+                # B component
+                b = y + 1.773 * (cb - 128)
+                # Clip values to 0-255 range
+                bgr[i, j, 0] = max(0, min(255, b))
+                bgr[i, j, 1] = max(0, min(255, g))
+                bgr[i, j, 2] = max(0, min(255, r))
+        return bgr.astype(np.uint8)
+    
     # Method to create a negative of the image
     def negative_image(self):
         """Create negative of the image"""
-        # Create a copy of the original image
         negative = self.image.copy()
-        # Get image dimensions (rows, columns, channels)
         rows, cols, channels = negative.shape
-        # Loop through each pixel and channel
         for i in range(rows):
             for j in range(cols):
                 for k in range(channels):
-                    # Subtract each pixel value from 255 to get negative
                     negative[i, j, k] = 255 - negative[i, j, k]
         return negative
     
     # Method to apply thresholding to the image
     def thresholding(self, threshold=127):
         """Apply thresholding to the image"""
-        # Convert to grayscale if image is color
         if len(self.image.shape) == 3:
-            gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+            gray = self.bgr_to_gray(self.image)
         else:
             gray = self.image.copy()
         
-        # Create a copy of the grayscale image
         thresh = gray.copy()
-        # Get image dimensions (rows, columns)
         rows, cols = thresh.shape
-        # Loop through each pixel
         for i in range(rows):
             for j in range(cols):
-                # Apply threshold - set to 255 if above threshold, else 0
                 thresh[i, j] = 255 if thresh[i, j] > threshold else 0
         return thresh
     
     # Method to apply gamma correction
     def gamma_correction(self, gamma=1.0, c=1):
         """Apply gamma correction: s = c * r^gamma"""
-        # Create a copy of the image with float32 type for calculations
         corrected = self.image.copy().astype(np.float32)
-        # Get image dimensions
         rows, cols, channels = corrected.shape
-        # Loop through each pixel and channel
         for i in range(rows):
             for j in range(cols):
                 for k in range(channels):
-                    # Apply gamma correction formula
                     corrected[i, j, k] = c * (corrected[i, j, k] / 255.0) ** gamma
-        # Scale back to 0-255 range and convert to uint8
         return (corrected * 255).astype(np.uint8)
     
     # Method to apply contrast stretching
     def contrast_stretching(self, r1=0, r2=255, s1=0, s2=255):
         """Apply contrast stretching"""
-        # Create a copy of the image
         stretched = self.image.copy()
-        # Get image dimensions
         rows, cols, channels = stretched.shape
-        # Loop through each pixel and channel
         for i in range(rows):
             for j in range(cols):
                 for k in range(channels):
-                    # Get current pixel value
                     pixel = stretched[i, j, k]
-                    # Apply contrast stretching formula
                     if pixel <= r1:
                         stretched[i, j, k] = s1
                     elif pixel >= r2:
@@ -100,37 +139,26 @@ class LUT:
     # Method to adjust brightness
     def adjust_brightness(self, value=0):
         """Adjust brightness by adding/subtracting value from all pixels"""
-        # Create a copy of the image with int16 type to handle negative values
         bright = self.image.copy().astype(np.int16)
-        # Get image dimensions
         rows, cols, channels = bright.shape
-        # Loop through each pixel and channel
         for i in range(rows):
             for j in range(cols):
                 for k in range(channels):
-                    # Add brightness value and clip to 0-255 range
                     bright[i, j, k] = np.clip(bright[i, j, k] + value, 0, 255)
-        # Convert back to uint8 after clipping
         return bright.astype(np.uint8)
     
     # Helper method to display histograms
     def show_histogram(self, image, title, pos, color='gray'):
         """Helper function to show histogram for a single image"""
-        # Create a subplot at the specified position
         plt.subplot(4, 4, pos)
-        # For color images
         if len(image.shape) == 3:
-            # Define colors for each channel (BGR)
             colors = ('b', 'g', 'r')
-            # Calculate and plot histogram for each channel
             for i, col in enumerate(colors):
                 hist = cv2.calcHist([image], [i], None, [256], [0, 256])
                 plt.plot(hist, color=col)
         else:
-            # For grayscale images, calculate and plot single histogram
             hist = cv2.calcHist([image], [0], None, [256], [0, 256])
             plt.plot(hist, color=color)
-        # Set plot title and labels
         plt.title(title)
         plt.xlabel('Pixel Value')
         plt.ylabel('Frequency')
@@ -138,7 +166,6 @@ class LUT:
     # Method to display all processed images and their histograms
     def display_all(self):
         """Display all processed images and their histograms in one figure"""
-        # Process all images using the various methods
         negative = self.negative_image()
         threshold = self.thresholding(127)
         gamma_corrected = self.gamma_correction(gamma=0.5)
@@ -147,16 +174,15 @@ class LUT:
         brighter = self.adjust_brightness(50)
         darker = self.adjust_brightness(-50)
         
-        # Convert BGR images to RGB for matplotlib display
-        original_rgb = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
-        negative_rgb = cv2.cvtColor(negative, cv2.COLOR_BGR2RGB)
-        gamma_rgb = cv2.cvtColor(gamma_corrected, cv2.COLOR_BGR2RGB)
-        contrast_rgb = cv2.cvtColor(contrast_stretched, cv2.COLOR_BGR2RGB)
-        equalized_rgb = cv2.cvtColor(equalized, cv2.COLOR_BGR2RGB)
-        brighter_rgb = cv2.cvtColor(brighter, cv2.COLOR_BGR2RGB)
-        darker_rgb = cv2.cvtColor(darker, cv2.COLOR_BGR2RGB)
+        # Convert images using our manual methods
+        original_rgb = self.bgr_to_rgb(self.image)
+        negative_rgb = self.bgr_to_rgb(negative)
+        gamma_rgb = self.bgr_to_rgb(gamma_corrected)
+        contrast_rgb = self.bgr_to_rgb(contrast_stretched)
+        equalized_rgb = self.bgr_to_rgb(equalized)
+        brighter_rgb = self.bgr_to_rgb(brighter)
+        darker_rgb = self.bgr_to_rgb(darker)
         
-        # Create a large figure for all subplots
         plt.figure(figsize=(20, 20))
         
         # Original image subplot
@@ -231,19 +257,15 @@ class LUT:
         # Darker histogram
         self.show_histogram(darker, 'Darker Histogram', 16)
         
-        # Adjust layout to prevent overlap
         plt.tight_layout()
-        # Display the figure
         plt.show()
     
     # Method to perform histogram equalization
     def histogram_equalization(self):
         """Apply histogram equalization"""
-        # For color images
         if len(self.image.shape) == 3:
-            # Convert to YCrCb color space (Y is luminance channel)
-            ycrcb = cv2.cvtColor(self.image, cv2.COLOR_BGR2YCrCb)
-            # Extract the Y channel
+            # Convert to YCrCb using our manual method
+            ycrcb = self.bgr_to_ycrcb(self.image)
             y = ycrcb[:, :, 0]
             
             # Calculate histogram for Y channel
@@ -271,31 +293,27 @@ class LUT:
                 for j in range(cols):
                     equalized[i, j] = cdf[y[i, j]]
             
-            # Replace Y channel with equalized values and convert back to BGR
+            # Replace Y channel and convert back to BGR
             ycrcb[:, :, 0] = equalized
-            return cv2.cvtColor(ycrcb, cv2.COLOR_YCrCb2BGR)
+            return self.ycrcb_to_bgr(ycrcb)
         else:
             # For grayscale images
-            # Calculate histogram
             hist = [0] * 256
             rows, cols = self.image.shape
             for i in range(rows):
                 for j in range(cols):
                     hist[self.image[i, j]] += 1
             
-            # Calculate CDF
             cdf = [0] * 256
             cdf[0] = hist[0]
             for i in range(1, 256):
                 cdf[i] = cdf[i-1] + hist[i]
             
-            # Normalize CDF
             cdf_min = min(cdf)
             total_pixels = rows * cols
             for i in range(256):
                 cdf[i] = round((cdf[i] - cdf_min) / (total_pixels - cdf_min) * 255)
             
-            # Apply equalization
             equalized = self.image.copy()
             for i in range(rows):
                 for j in range(cols):
