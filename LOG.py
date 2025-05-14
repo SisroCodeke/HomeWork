@@ -1,3 +1,4 @@
+
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,16 +14,16 @@ def apply_custom_filters(image_path, output_path, log_threshold=0):
     """
     # Define the kernels
     log_kernel = np.array([
-        [1,  1, 1],
-        [1, -8, 1],
-        [1,  1, 1]
+        [-1,  -1, -1],
+        [-1, 8, -1],
+        [-1,  -1, -1]
     ])
     
     sharpen_kernel = np.array([
-        [1, 1, 1],
-        [1, 9, 1],
-        [1, 1, 1]
-    ]) / 16
+        [-1,  -1, -1],
+        [-1, 9, -1],
+        [-1,  -1, -1]
+    ]) 
     
     # Read the image
     image = cv2.imread(image_path)
@@ -114,4 +115,4 @@ input_image = "/home/panzer/Desktop/Desk/Uni/sampleg.jpg"
 output_image = "/home/panzer/Desktop/Desk/Uni/season_8_result.jpg"
 
 # Apply custom filters
-apply_custom_filters(input_image, output_image, log_threshold=9)
+apply_custom_filters(input_image, output_image, log_threshold=120)
